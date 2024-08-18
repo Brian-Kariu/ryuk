@@ -24,12 +24,16 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile     string
+	environment string
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "go-ryuk",
@@ -54,7 +58,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.go-ryuk.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/test.local)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -68,13 +72,13 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := os.UserHomeDir()
+		home, err := os.Getwd()
 		cobra.CheckErr(err)
 
 		// Search config in home directory with name ".go-ryuk" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".go-ryuk")
+		viper.SetConfigType(".env")
+		viper.SetConfigName(strings.Join([]string{environment, "local"}, "."))
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
