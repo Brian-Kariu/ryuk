@@ -24,7 +24,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -58,27 +57,49 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/test.local)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "test.env", "The config file for your project. Ensure you run this in the base directory of your project (default is $CWD/test.local)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
+// TODO: Push this to its own utility file
+func createFileIfNotExists(filename string) error {
+	// Use os.OpenFile to open or create the file
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	if err != nil {
+		if os.IsExist(err) {
+			fmt.Println("File already exists")
+			return nil
+		}
+		return err
+	}
+	defer file.Close()
+
+	viper.SetConfigFile(filename)
+
+	fmt.Println("File created successfully")
+	return nil
+}
+
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
+	if cfgFile != "test" {
 		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
+		cfgFile = cfgFile + ".env"
+		if err := createFileIfNotExists(cfgFile); err != nil {
+			fmt.Println("Error:", err)
+		}
 	} else {
 		// Find home directory.
 		home, err := os.Getwd()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".go-ryuk" (without extension).
+		// Search config in home directory with name ".env" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType(".env")
-		viper.SetConfigName(strings.Join([]string{environment, "local"}, "."))
+		viper.SetConfigName(cfgFile)
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
