@@ -9,9 +9,28 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var envPair string
+
+func appendToFile(filename string, data string) error {
+	// Open the file with os.O_APPEND and os.O_WRONLY
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Write data to the file
+	_, err = file.WriteString(data)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Data appended successfully")
+	return nil
+}
 
 // setCmd represents the set command
 var setCmd = &cobra.Command{
@@ -19,16 +38,17 @@ var setCmd = &cobra.Command{
 	Short: "Set an environment variable",
 	Long:  `This command takes a single key/value pair and creates an environment variable.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		envMap := strings.Split(envPair, " ")
-		os.Setenv(strings.Join([]string{environment, envMap[0]}, "_"), envMap[1])
-		fmt.Println("set called")
+		envVars := strings.Join(args, "=")
+		fileName := viper.GetString("env")
+		appendToFile(fileName, envVars)
+		fmt.Printf("Env variable has been set for file, %s", fileName)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(setCmd)
 
-	setCmd.Flags().StringVarP(&envPair, "env", "e", "", "Add the key/value pair of the environment variable i.e 'Foo Something'")
+	// setCmd.Flags().StringVarP(&envPair, "env", "e", "", "Add the key/value pair of the environment variable i.e 'Foo Something'")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

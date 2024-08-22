@@ -6,14 +6,23 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func Validate(envFiles []string) int {
+type validEnv struct {
+	file    string
+	envVars int
+}
+
+func Validate(envFiles []string) []validEnv {
+	validEnvs := []validEnv{}
 	for _, value := range envFiles {
 		env, err := godotenv.Read(value)
-		fmt.Printf("Found %d env vars from %s\n", len(env), value)
+		envInfo := validEnv{file: value, envVars: len(env)}
+		_, ok := env["GORYUK"]
+		if ok {
+			validEnvs = append(validEnvs, envInfo)
+		}
 		if err != nil {
 			fmt.Printf("Error loading %s", err)
 		}
 	}
-	fmt.Println("Env files are valid!")
-	return 1
+	return validEnvs
 }

@@ -57,8 +57,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "test.env", "The config file for your project. Ensure you run this in the base directory of your project (default is $CWD/test.local)")
-
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "test", "The config file for your project. Ensure you run this in the base directory of your project (default is $CWD/test.local)")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -91,8 +90,10 @@ func initConfig() {
 		if err := createFileIfNotExists(cfgFile); err != nil {
 			fmt.Println("Error:", err)
 		}
+		viper.BindEnv("id")
+		os.Setenv("TEST_ID", "12")
+
 	} else {
-		// Find home directory.
 		home, err := os.Getwd()
 		cobra.CheckErr(err)
 

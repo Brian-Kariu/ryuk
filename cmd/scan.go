@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func Scan() []string {
+func Scan(params ...string) []string {
 	var envFiles []string
 	dir, err := os.Getwd()
 	if err != nil {
@@ -24,7 +24,7 @@ func Scan() []string {
 
 		found := false
 		for _, file := range files {
-			if strings.Contains(file.Name(), ".env") {
+			if strings.Contains(file.Name(), ".env") || len(params) != 0 && (strings.Contains(file.Name(), params[0]) && strings.Contains(file.Name(), ".env")) {
 				envFilePaths := filepath.Join(dir, file.Name())
 				envFiles = append(envFiles, envFilePaths)
 				fmt.Printf("Found %s file at: %s\n", file.Name(), envFiles[len(envFiles)-1])

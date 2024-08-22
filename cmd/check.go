@@ -4,6 +4,8 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +19,14 @@ var checkCmd = &cobra.Command{
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		envFiles := Scan()
-		Validate(envFiles)
+		if len(envFiles) != 0 {
+			validEnvs := Validate(envFiles)
+			if len(validEnvs) != 0 {
+				fmt.Printf("Found a %d valid env files\n", len(validEnvs))
+			} else {
+				fmt.Println("No valid env file found configured for ryuk. Run go-ryuk init to configure ryuk for this project.")
+			}
+		}
 	},
 }
 

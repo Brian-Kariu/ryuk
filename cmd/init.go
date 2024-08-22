@@ -23,6 +23,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -35,12 +36,27 @@ var initCmd = &cobra.Command{
 	Short: "Initialize you go-ryuk app",
 	Long:  `Initiailizes the app and sets configuration settings`,
 	Run: func(cmd *cobra.Command, args []string) {
+		viper.SetConfigName(cfgFile)
+		envFiles := []string{}
+		validEnvFiles := 0
+		scanFiles := Scan(environment)
+		if len(scanFiles) != 0 && slices.Contains(scanFiles, environment) {
+			validEnvFiles = len(Validate(scanFiles))
+			envFiles = scanFiles
+
+		} else {
+			envFileName := environment + ".env"
+			envFiles = append(envFiles, envFileName)
+
+		}
 		environmentUpper := strings.ToUpper(environment)
-		viper.SetEnvPrefix(environment)
-		Create(strings.Join([]string{environmentUpper, "ENV"}, "_"), environment)
+		if validEnvFiles == 0 {
+			Create(strings.Join([]string{environmentUpper, "ENV"}, "_"), environment, envFiles[0])
+			Create("GORYUK", "TRUE", envFiles[0])
+		}
 		viper.WatchConfig()
-		env := viper.GetEnvPrefix()
-		fmt.Printf("%s environment has been activated!", env)
+		viper.GetEnvPrefix()
+		fmt.Printf("%s environment has been activated!", environment)
 	},
 }
 
@@ -53,6 +69,7 @@ func init() {
 	// and all subcommands, e.g.:
 	// initCmd.PersistentFlags().String("foo", "", "A help for foo")
 	initCmd.PersistentFlags().StringVarP(&environment, "environment", "e", "test", "The environment the user is working in i.e test, staging")
+	viper.BindPFlag("environment", initCmd.Flags().Lookup("environment"))
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
