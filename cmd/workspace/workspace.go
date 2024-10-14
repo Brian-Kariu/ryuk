@@ -29,7 +29,7 @@ import (
 
 var WorkspaceCmd = &cobra.Command{
 	Use:   "workspace",
-	Short: "Manage the workspaces for your github.com/Brian-Kariu/ryuk projects.",
+	Short: "Manage the workspaces for your projects.",
 	Long:  `Create, update, and delete workspaces`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("workspace called")

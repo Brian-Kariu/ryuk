@@ -44,7 +44,7 @@ var createCmd = &cobra.Command{
 func init() {
 	EnvironmentCmd.AddCommand(createCmd)
 
-	myFlagSet := flags.NewCreateFlagSet()
+	myFlagSet := flags.NewCreateFlagSet(flags.Environment)
 	createCmd.Flags().AddFlagSet(myFlagSet)
 
 	// Bind flags to Viper
