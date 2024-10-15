@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 Brian Kariu
+	Copyright © 2024 Brian Kariu
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,9 +31,46 @@ import (
 
 	"github.com/Brian-Kariu/ryuk/cmd/environment"
 	"github.com/Brian-Kariu/ryuk/cmd/workspace"
+	"github.com/Brian-Kariu/ryuk/db"
 )
 
 var cfgFile string
+
+type WorkspaceConfig struct {
+	Name        string   `mapstructure:"name"`
+	Path        string   `mapstructure:"path"`
+	Environment []string `mapstructure:"environment"`
+}
+
+type configFile struct {
+	path     string
+	fileName string
+	fullpath string
+}
+
+func (c configFile) checkDir() {
+	if _, err := os.Stat(c.path); os.IsNotExist(err) {
+		err := os.MkdirAll(c.path, 0755)
+		cobra.CheckErr(err)
+	}
+}
+
+func (c configFile) checkFile() {
+	if _, err := os.Stat(c.fullpath); os.IsNotExist(err) {
+		file, err := os.Create(c.fullpath)
+		cobra.CheckErr(err)
+		defer file.Close()
+	}
+}
+
+func newConfigFile(path, fileName string) *configFile {
+	fullpath := filepath.Join(path, fileName)
+	return &configFile{
+		path:     path,
+		fileName: fileName,
+		fullpath: fullpath,
+	}
+}
 
 var RootCmd = &cobra.Command{
 	Use:   "github.com/Brian-Kariu/ryuk",
@@ -54,27 +91,43 @@ func addSubcommands() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/github.com/Brian-Kariu/ryuk/.github.com/Brian-Kariu/ryuk.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ryuk/ryuk.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	addSubcommands()
 }
 
+func initGlobalDb(path string) {
+	dbInstance := db.NewClient(filepath.Join(path, "default"), "")
+	dbInstance.CreateBucket("prod")
+}
+
 func initConfig() {
+	// NOTE: cfgFile and configFile need to be aligned, could cause issues down the line
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		configPath := filepath.Join(home, ".github.com/Brian-Kariu/ryuk")
-		if _, err := os.Open(configPath); os.IsNotExist(err) {
-			cobra.CheckErr(err)
-		}
+		basePath := filepath.Join(home, ".ryuk/")
+		configFileInstance := newConfigFile(basePath, ".ryuk.yaml")
+		configFileInstance.checkDir()
+		configFileInstance.checkFile()
 
-		viper.AddConfigPath(configPath)
+		defaultDbName := "default"
+		defaultWorkspace := WorkspaceConfig{
+			Name:        defaultDbName,
+			Path:        filepath.Join(basePath, defaultDbName+".db"),
+			Environment: []string{"prod"},
+		}
+		initGlobalDb(basePath)
+		viper.AddConfigPath(basePath)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".github.com/Brian-Kariu/ryuk")
+		viper.SetConfigName(".ryuk")
+		viper.SetDefault("current_workspace", "default")
+		viper.SetDefault("worspaces", []WorkspaceConfig{defaultWorkspace})
+		viper.WriteConfig()
 	}
 
 	viper.AutomaticEnv()

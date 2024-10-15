@@ -22,42 +22,60 @@ THE SOFTWARE.
 package workspace
 
 import (
-	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/flags"
+	"github.com/Brian-Kariu/ryuk/db"
 )
+
+func createDb(dbName, dbConfigs string) {
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+
+	basePath := filepath.Join(home, ".ryuk/")
+	db.NewClient(filepath.Join(basePath, dbName), dbConfigs)
+	workspace := map[string]string{
+		"name":        dbName,
+		"path":        filepath.Join(basePath, dbName+".db"),
+		"environment": "prod",
+	}
+	viper.Set("workspaces", workspace)
+	viper.SafeWriteConfig()
+
+	log.Printf("%s workspace has been created.\n", dbName)
+}
 
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new workspace",
 	Long: `Use this command to create a new resource. A resource
-	could be a workspace, environment or variable
+	could be a workspace
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("created workspace")
+		dbName, err := cmd.Flags().GetString("name")
+		if err != nil {
+			log.Fatal("DB name is not valid")
+		}
+		dbConfigs, err := cmd.Flags().GetString("config")
+		if err != nil {
+			log.Fatal("DB Config name is not valid")
+		}
+		createDb(dbName, dbConfigs)
 	},
 }
 
 func init() {
 	WorkspaceCmd.AddCommand(createCmd)
 
-	// Create the FlagSet and bind it to the command
-	myFlagSet := flags.NewCreateFlagSet()
+	myFlagSet := flags.NewCreateFlagSet(flags.Workspace)
 	createCmd.Flags().AddFlagSet(myFlagSet)
 
-	// Bind flags to Viper
+	createCmd.PersistentFlags().String("config", "", "custom configs for workspace")
+
 	viper.BindPFlags(createCmd.Flags())
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

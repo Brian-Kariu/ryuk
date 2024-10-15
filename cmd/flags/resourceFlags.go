@@ -24,12 +24,11 @@ func (f ResourceFlagSet) VisitAll(fn func(flagValue)) {
 	}
 }
 
-func NewCreateFlagSet() *pflag.FlagSet {
+func NewCreateFlagSet(resourceType ResourceTypes) *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("createFlagSet", pflag.ContinueOnError)
 
-	flagSet.String("name", "", "Name of the resource")
-	// TODO: Remove this later
-	flagSet.Int("int", 1, "Placeholder test")
+	description := "Name of the " + resourceType.String()
+	flagSet.String("name", "", description)
 
 	return flagSet
 }
