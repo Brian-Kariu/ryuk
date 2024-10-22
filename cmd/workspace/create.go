@@ -22,60 +22,58 @@ THE SOFTWARE.
 package workspace
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Brian-Kariu/ryuk/cmd/flags"
+	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
+// TODO: This should be a standalone func that can be reusable
+// FIX: This might also be okay since its only used here
 func createDb(dbName, dbConfigs string) {
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	basePath := filepath.Join(home, ".ryuk/")
-	db.NewClient(filepath.Join(basePath, dbName), dbConfigs)
-	workspace := map[string]string{
-		"name":        dbName,
-		"path":        filepath.Join(basePath, dbName+".db"),
-		"environment": "prod",
+	db.NewClient(filepath.Join(config.BasePath, dbName), dbConfigs)
+	config.NewWorkspaceConfig(dbName, []string{})
+	viper.Set("workspaces", config.Workspaces)
+	if err := viper.WriteConfig(); err != nil {
+		fmt.Printf("Error saving workspace '%s': %v\n", dbName, err)
 	}
-	viper.Set("workspaces", workspace)
-	viper.SafeWriteConfig()
-
 	log.Printf("%s workspace has been created.\n", dbName)
 }
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.MatchAll(cobra.MaximumNArgs(1)),
 	Short: "Create a new workspace",
 	Long: `Use this command to create a new resource. A resource
 	could be a workspace
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dbName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			log.Fatal("DB name is not valid")
+		workspaceName := args[0]
+		if workspaceName == "" {
+			log.Fatal("Workspace name not set")
 		}
 		dbConfigs, err := cmd.Flags().GetString("config")
 		if err != nil {
 			log.Fatal("DB Config name is not valid")
 		}
-		createDb(dbName, dbConfigs)
+		createDb(workspaceName, dbConfigs)
 	},
 }
 
 func init() {
 	WorkspaceCmd.AddCommand(createCmd)
 
-	myFlagSet := flags.NewCreateFlagSet(flags.Workspace)
-	createCmd.Flags().AddFlagSet(myFlagSet)
+	// myFlagSet := flags.NewCreateFlagSet(flags.Workspace)
+	// createCmd.Flags().AddFlagSet(myFlagSet)
 
-	createCmd.PersistentFlags().String("config", "", "custom configs for workspace")
-
-	viper.BindPFlags(createCmd.Flags())
+	// createCmd.PersistentFlags().String("workspace", "", "Current Workspace")
+	// createCmd.PersistentFlags().String("config", "", "custom configs for workspace")
+	//
+	// viper.BindPFlags(createCmd.Flags())
+	// viper.BindPFlag("current_workspace", createCmd.PersistentFlags().Lookup("workspace"))
 }

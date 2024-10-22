@@ -25,11 +25,6 @@ import (
 	"github.com/Brian-Kariu/ryuk/cmd"
 )
 
-// import (
-// 	"github.com/Brian-Kariu/ryuk/db"
-// )
-
 func main() {
-	// db.Main()
 	cmd.Execute()
 }
