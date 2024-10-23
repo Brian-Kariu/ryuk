@@ -26,25 +26,47 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/Brian-Kariu/ryuk/cmd/flags"
 )
 
-// deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Removes the current workspace",
-	Long:  `Deletes your current workspace`,
+	Args:  cobra.ExactArgs(1),
+	Short: "Removes a workspace",
+	Long:  `Deletes the specified workspace. This is case sensitive.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("deleted workspace.")
+		workspaceName := args[0]
+		err := viper.ReadInConfig()
+		if err != nil {
+			panic(fmt.Errorf("Fatal error config file: %w", err))
+		}
+
+		if viper.IsSet("workspaces") == false {
+			fmt.Println("Lord help us")
+		}
+
+		workspaces := viper.GetStringSlice("workspaces")
+
+		fmt.Printf("These are the workspaces %s\n", workspaces)
+		fmt.Printf("This is workspace name %s\n", workspaceName)
+		for i, workspace := range workspaces {
+			fmt.Printf("This is a single workspace%s\n", workspace)
+			if workspace == workspaceName {
+				workspaces = append(workspaces[:i], workspaces[i+1:]...)
+				break
+			}
+		}
+		fmt.Printf("These are the workspaces %s", workspaces)
+		viper.Set("workspaces", workspaces)
+		viper.WriteConfig()
+		fmt.Printf("Deleted workspace %s.", workspaceName)
 	},
 }
 
 func init() {
 	WorkspaceCmd.AddCommand(deleteCmd)
 
-	myFlagSet := flags.NewDeleteFlagSet("workspace")
-	deleteCmd.Flags().AddFlagSet(myFlagSet)
-
+	// myFlagSet := flags.NewDeleteFlagSet("workspace")
+	// deleteCmd.Flags().AddFlagSet(myFlagSet)
+	//
 	viper.BindPFlags(createCmd.Flags())
 }

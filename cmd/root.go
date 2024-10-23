@@ -29,18 +29,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/cmd/environment"
 	"github.com/Brian-Kariu/ryuk/cmd/workspace"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
 var cfgFile string
-
-type WorkspaceConfig struct {
-	Name        string   `mapstructure:"name"`
-	Path        string   `mapstructure:"path"`
-	Environment []string `mapstructure:"environment"`
-}
 
 type configFile struct {
 	path     string
@@ -73,7 +68,7 @@ func newConfigFile(path, fileName string) *configFile {
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "github.com/Brian-Kariu/ryuk",
+	Use:   "ryuk",
 	Short: "A fast configuration management library",
 	Long:  `Ryuk is a powerful cli app that helps you manage your application configs and secrets!`,
 }
@@ -107,32 +102,40 @@ func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		basePath := filepath.Join(home, ".ryuk/")
-		configFileInstance := newConfigFile(basePath, ".ryuk.yaml")
+		config.InitConstants()
+		configFileInstance := newConfigFile(config.BasePath, ".ryuk.yaml")
 		configFileInstance.checkDir()
 		configFileInstance.checkFile()
 
-		defaultDbName := "default"
-		defaultWorkspace := WorkspaceConfig{
-			Name:        defaultDbName,
-			Path:        filepath.Join(basePath, defaultDbName+".db"),
-			Environment: []string{"prod"},
-		}
-		initGlobalDb(basePath)
-		viper.AddConfigPath(basePath)
+		viper.AddConfigPath(config.BasePath)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".ryuk")
-		viper.SetDefault("current_workspace", "default")
-		viper.SetDefault("worspaces", []WorkspaceConfig{defaultWorkspace})
-		viper.WriteConfig()
+
 	}
 
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+
+	if viper.IsSet("workspaces") == false {
+		defaultDbName := "default"
+		defaultWorkspace := config.WorkspaceConfig{
+			Name:        defaultDbName,
+			Path:        filepath.Join(config.BasePath, "default.db"),
+			Environment: []string{"prod"},
+		}
+
+		initGlobalDb(config.BasePath)
+		viper.SetDefault("workspaces", []config.WorkspaceConfig{defaultWorkspace})
+
+		viper.WriteConfig()
+
+	}
+
+	err := viper.UnmarshalKey("workspaces", &config.Workspaces)
+	if err != nil {
+		fmt.Println("Error initializing workspaces:", err)
 	}
 }
