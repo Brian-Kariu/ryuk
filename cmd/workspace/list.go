@@ -35,12 +35,7 @@ var listCmd = &cobra.Command{
 	Short: "Get details for the current workspace.",
 	Long:  `Read the configuration file and displays details for the current workspace.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := viper.ReadInConfig()
-		if err != nil {
-			panic(fmt.Errorf("Fatal error config file: %w", err))
-		}
-
-		err = viper.UnmarshalKey("workspaces", &config.Workspaces)
+		err := viper.UnmarshalKey("workspaces", &config.Workspaces)
 		if err != nil {
 			fmt.Println("Error fetching workspaces:", err)
 		}
@@ -58,14 +53,4 @@ var listCmd = &cobra.Command{
 
 func init() {
 	WorkspaceCmd.AddCommand(listCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// readCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// readCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

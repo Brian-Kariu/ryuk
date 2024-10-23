@@ -22,12 +22,10 @@ THE SOFTWARE.
 package workspace
 
 import (
-	"fmt"
 	"log"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/db"
@@ -38,11 +36,6 @@ import (
 func createDb(dbName, dbConfigs string) {
 	db.NewClient(filepath.Join(config.BasePath, dbName), dbConfigs)
 	config.NewWorkspaceConfig(dbName, []string{})
-	viper.Set("workspaces", config.Workspaces)
-	if err := viper.WriteConfig(); err != nil {
-		fmt.Printf("Error saving workspace '%s': %v\n", dbName, err)
-	}
-	log.Printf("%s workspace has been created.\n", dbName)
 }
 
 var createCmd = &cobra.Command{
@@ -67,13 +60,4 @@ var createCmd = &cobra.Command{
 
 func init() {
 	WorkspaceCmd.AddCommand(createCmd)
-
-	// myFlagSet := flags.NewCreateFlagSet(flags.Workspace)
-	// createCmd.Flags().AddFlagSet(myFlagSet)
-
-	// createCmd.PersistentFlags().String("workspace", "", "Current Workspace")
-	// createCmd.PersistentFlags().String("config", "", "custom configs for workspace")
-	//
-	// viper.BindPFlags(createCmd.Flags())
-	// viper.BindPFlag("current_workspace", createCmd.PersistentFlags().Lookup("workspace"))
 }

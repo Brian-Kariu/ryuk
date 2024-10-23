@@ -121,14 +121,9 @@ func initConfig() {
 
 	if viper.IsSet("workspaces") == false {
 		defaultDbName := "default"
-		defaultWorkspace := config.WorkspaceConfig{
-			Name:        defaultDbName,
-			Path:        filepath.Join(config.BasePath, "default.db"),
-			Environment: []string{"prod"},
-		}
-
+		envs := []string{"prod"}
+		config.NewWorkspaceConfig(defaultDbName, envs)
 		initGlobalDb(config.BasePath)
-		viper.SetDefault("workspaces", []config.WorkspaceConfig{defaultWorkspace})
 
 		viper.WriteConfig()
 
