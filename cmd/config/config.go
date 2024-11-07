@@ -9,7 +9,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Workspaces []WorkspaceConfig
+var (
+	Workspaces       []WorkspaceConfig
+	CurrentWorkspace string
+)
 
 func updateWorkspaces(w WorkspaceConfig) error {
 	err := checkWorkspaceExists(w.Name)
@@ -39,6 +42,23 @@ func DeleteWorkspace(id string) {
 			Workspaces = append(Workspaces[:i], Workspaces[i+1:]...)
 			break
 		}
+	}
+	viper.Set("workspaces", Workspaces)
+	if err := viper.WriteConfig(); err != nil {
+		fmt.Errorf("Error saving workspaces : %v\n", err)
+	}
+}
+
+func UpdateWorkspace(name, env string) {
+	ws, err := GetWorkspace(name)
+	if err != nil {
+		fmt.Println("Error fetching workspace, %s", err)
+	}
+	if len(ws.Environment) == 0 {
+		ws.Environment = []string{env}
+	}
+	if len(ws.Environment) != 0 {
+		ws.Environment = append(ws.Environment, env)
 	}
 	viper.Set("workspaces", Workspaces)
 	if err := viper.WriteConfig(); err != nil {

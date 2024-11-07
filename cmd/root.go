@@ -88,6 +88,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ryuk/ryuk.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "default", "Workspace currently in use.")
+	viper.BindPFlag("workspace", RootCmd.PersistentFlags().Lookup("workspace"))
 
 	addSubcommands()
 }
@@ -95,6 +97,30 @@ func init() {
 func initGlobalDb(path string) {
 	dbInstance := db.NewClient(filepath.Join(path, "default"), "")
 	dbInstance.CreateBucket("prod")
+}
+
+func setCurrentWorkspace() {
+	verifiedWorkspace := ""
+	if viper.Get("workspace") == "" {
+		viper.Set("workspace", "default")
+		if err := viper.WriteConfig(); err != nil {
+			fmt.Errorf("Error saving current workspace: %v\n", err)
+		}
+		return
+
+	}
+	for _, ws := range config.Workspaces {
+		if ws.Name == config.CurrentWorkspace {
+			verifiedWorkspace = ws.Name
+			break
+		}
+	}
+	if verifiedWorkspace != "" {
+		viper.Set("workspace", verifiedWorkspace)
+	}
+	if err := viper.WriteConfig(); err != nil {
+		fmt.Errorf("Error saving current workspace: %v\n", err)
+	}
 }
 
 func initConfig() {
@@ -128,6 +154,7 @@ func initConfig() {
 		viper.WriteConfig()
 
 	}
+	setCurrentWorkspace()
 
 	err := viper.UnmarshalKey("workspaces", &config.Workspaces)
 	if err != nil {

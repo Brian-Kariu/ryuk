@@ -19,22 +19,47 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package workspace
+package environment
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/Brian-Kariu/ryuk/cmd/config"
 )
 
-var WorkspaceCmd = &cobra.Command{
-	Use:   "workspace",
-	Short: "Manage the workspaces for your projects.",
-	Long:  `Create, update, and delete workspaces`,
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "Get details for the current environment.",
+	Long:  `Read the configuration file and displays details for the current environment.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		err := viper.UnmarshalKey("workspaces", &config.Workspaces)
+		if err != nil {
+			fmt.Println("Error fetching workspaces:", err)
+		}
+		if len(config.Workspaces) == 0 {
+			fmt.Printf("No workspaces found.\n")
+			return
+		}
+
+		currentWorkspace, err := config.GetWorkspace(viper.GetString("workspace"))
+		if err != nil {
+			fmt.Println("Error fetching current workspace:", err)
+		}
+
+		fmt.Printf("Activated Workspace: %s\n", currentWorkspace.Name)
+		fmt.Printf("Available Environments\n")
+		if len(currentWorkspace.Environment) == 0 {
+			fmt.Print("[]")
+		}
+		for _, ws := range currentWorkspace.Environment {
+			fmt.Printf("\t- %s\n", ws)
+		}
+	},
 }
 
 func init() {
-	WorkspaceCmd.PersistentFlags().String("config", "", "custom configs for workspace")
-	WorkspaceCmd.MarkFlagRequired("config")
-
-	// WorkspaceCmd.PersistentFlags().StringVar(&config.CurrentWorkspace,"current_workspace", "default", "Workspace currently in use.")
-	// viper.BindPFlag("workspace", WorkspaceCmd.PersistentFlags().Lookup("workspace"))
+	EnvironmentCmd.AddCommand(listCmd)
 }

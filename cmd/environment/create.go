@@ -22,13 +22,21 @@ THE SOFTWARE.
 package environment
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/cmd/flags"
+	"github.com/Brian-Kariu/ryuk/db"
 )
+
+func createEnv(envName string) {
+	client := db.NewClient(viper.GetString("workspace"), "")
+	client.CreateBucket(envName)
+	config.UpdateWorkspace(viper.GetString("workspace"), envName)
+}
 
 var createCmd = &cobra.Command{
 	Use:   "create",
@@ -37,7 +45,11 @@ var createCmd = &cobra.Command{
 	could be a workspace, environment or variable
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("created environment")
+		envName := args[0]
+		if envName == "" {
+			log.Fatal("Environment name not set")
+		}
+		createEnv(envName)
 	},
 }
 
@@ -49,14 +61,4 @@ func init() {
 
 	// Bind flags to Viper
 	viper.BindPFlags(createCmd.Flags())
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
