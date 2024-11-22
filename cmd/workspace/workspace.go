@@ -35,6 +35,6 @@ func init() {
 	WorkspaceCmd.PersistentFlags().String("config", "", "custom configs for workspace")
 	WorkspaceCmd.MarkFlagRequired("config")
 
-	// WorkspaceCmd.PersistentFlags().StringVar(&config.CurrentWorkspace,"current_workspace", "default", "Workspace currently in use.")
+	// WorkspaceCmd.PersistentFlags().StringVar(&config.CurrentWorkspace,"current_workspace", "local", "Workspace currently in use.")
 	// viper.BindPFlag("workspace", WorkspaceCmd.PersistentFlags().Lookup("workspace"))
 }

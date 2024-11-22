@@ -87,9 +87,9 @@ func addSubcommands() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ryuk/ryuk.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (local is $HOME/.ryuk/ryuk.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	RootCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "default", "Workspace currently in use.")
+	RootCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "local", "Workspace currently in use.")
 	viper.BindPFlag("workspace", RootCmd.PersistentFlags().Lookup("workspace"))
 	RootCmd.PersistentFlags().StringVarP(&config.CurrentEnv, "env", "e", "", "Env currently in use.")
 	viper.BindPFlag("env", RootCmd.PersistentFlags().Lookup("env"))
@@ -98,7 +98,7 @@ func init() {
 }
 
 func initGlobalDb(path string) {
-	dbInstance, err := db.NewClient(filepath.Join(path, "default"), "")
+	dbInstance, err := db.NewClient(filepath.Join(path, "local"), "")
 	if err != nil {
 		fmt.Printf("Error creating DB!")
 	}
@@ -108,7 +108,7 @@ func initGlobalDb(path string) {
 func setCurrentWorkspace() {
 	verifiedWorkspace := ""
 	if viper.Get("workspace") == "" {
-		viper.Set("workspace", "default")
+		viper.Set("workspace", "local")
 		if err := viper.WriteConfig(); err != nil {
 			fmt.Errorf("Error saving current workspace: %v\n", err)
 		}
@@ -152,9 +152,9 @@ func initConfig() {
 	}
 
 	if viper.IsSet("workspaces") == false {
-		defaultDbName := "default"
+		localDbName := "local"
 		envs := []string{"prod"}
-		config.NewWorkspaceConfig(defaultDbName, envs)
+		config.NewWorkspaceConfig(localDbName, envs)
 		initGlobalDb(config.BasePath)
 
 		viper.WriteConfig()
