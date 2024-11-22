@@ -19,45 +19,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package workspace
+package variables
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
-// TODO: This should be a standalone func that can be reusable
-// FIX: This might also be okay since its only used here
-func createDb(dbName, dbConfigs string) {
-	db.NewClient(filepath.Join(config.BasePath, dbName), dbConfigs)
-	config.NewWorkspaceConfig(dbName, []string{})
-}
-
-var createCmd = &cobra.Command{
-	Use:   "create",
-	Args:  cobra.MatchAll(cobra.MaximumNArgs(1)),
-	Short: "Create a new workspace",
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all environment variables",
 	Long: `Use this command to create a new resource. A resource
-	could be a workspace
+	could be a workspace, environment or variable
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		workspaceName := args[0]
-		if workspaceName == "" {
-			log.Fatal("Workspace name not set")
-		}
-		dbConfigs, err := cmd.Flags().GetString("config")
+		client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), viper.GetString("env"))
 		if err != nil {
-			log.Fatal("DB Config name is not valid")
+			fmt.Printf("Error creating DB!")
 		}
-		createDb(workspaceName, dbConfigs)
+		_, err = client.ListKeys(viper.GetString("env"))
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
 func init() {
-	WorkspaceCmd.AddCommand(createCmd)
+	VariablesCmd.AddCommand(listCmd)
 }

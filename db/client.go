@@ -8,53 +8,39 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type config struct {
-	key   []byte
-	value []byte
+type Config struct {
+	Key   []byte
+	Value []byte
 }
 
-func (c config) ToBytes() (key []byte, value []byte) {
-	return []byte(c.key), []byte(c.value)
+func (c Config) ToBytes() (key []byte, value []byte) {
+	return []byte(c.Key), []byte(c.Value)
 }
 
 type configs struct {
-	config config
+	config Config
 }
 
 type client struct {
 	name         string
 	globalBucket string
+	db           *bolt.DB
 }
 
-func (c client) String() string {
-	return fmt.Sprintf("{name:%s, globalBucket:%s}", c.name, c.globalBucket)
-}
-
-func (c *client) openDB() (*bolt.DB, error) {
-	db, err := bolt.Open(c.name, 0600, &bolt.Options{Timeout: 1 * time.Second})
+func openDB(name string) (*bolt.DB, error) {
+	db, err := bolt.Open(name, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, fmt.Errorf("Error opening DB: %v", err)
 	}
 	return db, nil
 }
 
-func (c client) init() {
-	db, err := c.openDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer db.Close()
-	log.Printf("Ryuk %s initialized.\n", c.name)
+func (c client) String() string {
+	return fmt.Sprintf("{name:%s, globalBucket:%s}", c.name, c.globalBucket)
 }
 
 func (c client) CreateBucket(name string) {
-	db, err := c.openDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	dbError := db.Update(func(tx *bolt.Tx) error {
+	dbError := c.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(name))
 		if err != nil {
 			return fmt.Errorf("Error creating bucket: %s", err)
@@ -65,49 +51,81 @@ func (c client) CreateBucket(name string) {
 	if dbError != nil {
 		fmt.Printf("createBucket: %s", dbError)
 	}
+	defer c.db.Close()
 }
 
-func (c client) addKey(bucket string, data config) {
-	db, err := c.openDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	db.Update(func(tx *bolt.Tx) error {
+func (c client) AddKey(bucket string, data Config) error {
+	err := c.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
-		key, value := data.ToBytes()
-		err := b.Put(key, value)
-		return fmt.Errorf("Error adding key to bucket %s: %s", bucket, err)
-	})
-	log.Printf("Added config: %s\n", data.key)
-}
-
-func (c client) getKey(bucket string, config string) string {
-	db, err := c.openDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	v := []byte("")
-
-	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket))
-		v = b.Get([]byte(config))
-		if v == nil {
-			log.Printf("Config %s does not exist or is nested.\n", config)
-		} else {
-			log.Printf("Found config %s.\n", config)
+		if b == nil {
+			return fmt.Errorf("bucket %s does not exist", bucket)
 		}
+
+		return b.Put([]byte(data.Key), []byte(data.Value))
+	})
+	if err != nil {
+		log.Printf("Error adding key to bucket %s: %v\n", bucket, err)
+		return err
+	}
+
+	log.Printf("Added config: %s, to bucket: %s\n", data.Key, bucket)
+	return nil
+}
+
+func (c client) GetKey(bucket string, config string) {
+	v := []byte("")
+	err := c.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", bucket)
+		}
+		v = b.Get([]byte(config))
+
+		// HACK: This should change when a config can be json
+		fmt.Printf("%s", string(v))
 		return nil
 	})
-
-	// HACK: This should change when a config can be json
-	return string(v)
+	if err != nil {
+		log.Printf("Error retrieving key %s\n", config)
+	}
 }
 
-func NewClient(name, globalBucket string) *client {
+func (c client) ListKeys(bucket string) ([]string, error) {
+	keys := []string{}
+	err := c.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", bucket)
+		}
+
+		return b.ForEach(func(k, _ []byte) error {
+			keys = append(keys, string(k))
+			fmt.Printf("\t- %s\n", string(k))
+			return nil
+		})
+	})
+	defer c.db.Close()
+	return keys, err
+}
+
+func (c client) DeleteKey(bucket, config string) {
+	err := c.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", bucket)
+		}
+
+		err := b.Delete([]byte(config))
+		return err
+	})
+	if err != nil {
+		log.Fatal("Delete operation failed: %s", err)
+	}
+
+	log.Printf("Config %s has been deleted", config)
+}
+
+func NewClient(name, globalBucket string) (*client, error) {
 	if globalBucket == "" {
 		globalBucket = "global_configs"
 	}
@@ -115,10 +133,15 @@ func NewClient(name, globalBucket string) *client {
 	if name == "" {
 		name = "ryuk"
 	}
-	clientInstance := &client{
-		name:         name + ".db",
-		globalBucket: globalBucket,
+	db, err := openDB(name)
+	if err != nil {
+		return nil, err
 	}
-	clientInstance.init()
-	return clientInstance
+
+	clientInstance := &client{
+		name:         name,
+		globalBucket: globalBucket,
+		db:           db,
+	}
+	return clientInstance, nil
 }

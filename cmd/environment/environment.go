@@ -22,19 +22,14 @@ THE SOFTWARE.
 package environment
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
 // environmentCmd represents the environment command
 var EnvironmentCmd = &cobra.Command{
-	Use:   "environment",
+	Use:   "env",
 	Short: "Manage the environments in your projects.",
 	Long:  `Manage the various environment for your projects.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("environment called")
-	},
 }
 
 func init() {

@@ -19,45 +19,58 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package workspace
+package variables
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
-// TODO: This should be a standalone func that can be reusable
-// FIX: This might also be okay since its only used here
-func createDb(dbName, dbConfigs string) {
-	db.NewClient(filepath.Join(config.BasePath, dbName), dbConfigs)
-	config.NewWorkspaceConfig(dbName, []string{})
+type Config struct {
+	key   []byte
+	value []byte
+}
+
+func createVar(bucket string, data db.Config) {
+	client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), bucket)
+	if err != nil {
+		fmt.Printf("Error creating DB!")
+	}
+	err = client.AddKey(bucket, data)
+	if err != nil {
+		log.Fatalf("Failed to add key: %v", err)
+	}
 }
 
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Args:  cobra.MatchAll(cobra.MaximumNArgs(1)),
-	Short: "Create a new workspace",
+	Short: "Create a new environment",
+	Args:  cobra.ExactArgs(2),
 	Long: `Use this command to create a new resource. A resource
-	could be a workspace
+	could be a workspace, environment or variable
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		workspaceName := args[0]
-		if workspaceName == "" {
-			log.Fatal("Workspace name not set")
+		if args[0] == "" && args[1] == "" {
+			log.Fatal("Not specified key and value")
 		}
-		dbConfigs, err := cmd.Flags().GetString("config")
-		if err != nil {
-			log.Fatal("DB Config name is not valid")
-		}
-		createDb(workspaceName, dbConfigs)
+		data := db.Config{Key: []byte(args[0]), Value: []byte(args[1])}
+		createVar(viper.GetString("env"), data)
 	},
 }
 
 func init() {
-	WorkspaceCmd.AddCommand(createCmd)
+	VariablesCmd.AddCommand(createCmd)
+
+	// myFlagSet := flags.NewCreateFlagSet(flags.Environment)
+	// createCmd.Flags().AddFlagSet(myFlagSet)
+	//
+	// // Bind flags to Viper
+	// viper.BindPFlags(createCmd.Flags())
 }

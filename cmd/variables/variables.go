@@ -19,45 +19,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package workspace
+package variables
 
 import (
-	"log"
-	"path/filepath"
-
 	"github.com/spf13/cobra"
-
-	"github.com/Brian-Kariu/ryuk/cmd/config"
-	"github.com/Brian-Kariu/ryuk/db"
 )
 
-// TODO: This should be a standalone func that can be reusable
-// FIX: This might also be okay since its only used here
-func createDb(dbName, dbConfigs string) {
-	db.NewClient(filepath.Join(config.BasePath, dbName), dbConfigs)
-	config.NewWorkspaceConfig(dbName, []string{})
-}
-
-var createCmd = &cobra.Command{
-	Use:   "create",
-	Args:  cobra.MatchAll(cobra.MaximumNArgs(1)),
-	Short: "Create a new workspace",
-	Long: `Use this command to create a new resource. A resource
-	could be a workspace
-	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		workspaceName := args[0]
-		if workspaceName == "" {
-			log.Fatal("Workspace name not set")
-		}
-		dbConfigs, err := cmd.Flags().GetString("config")
-		if err != nil {
-			log.Fatal("DB Config name is not valid")
-		}
-		createDb(workspaceName, dbConfigs)
-	},
+// variablesCmd represents the environment command
+var VariablesCmd = &cobra.Command{
+	Use:   "var",
+	Short: "Manage the variables in your projects.",
+	Long:  `Manage the various variables for your projects.`,
 }
 
 func init() {
-	WorkspaceCmd.AddCommand(createCmd)
 }

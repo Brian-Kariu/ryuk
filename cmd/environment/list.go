@@ -19,45 +19,53 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package workspace
+package environment
 
 import (
-	"log"
-	"path/filepath"
+	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
-	"github.com/Brian-Kariu/ryuk/db"
 )
 
-// TODO: This should be a standalone func that can be reusable
-// FIX: This might also be okay since its only used here
-func createDb(dbName, dbConfigs string) {
-	db.NewClient(filepath.Join(config.BasePath, dbName), dbConfigs)
-	config.NewWorkspaceConfig(dbName, []string{})
-}
-
-var createCmd = &cobra.Command{
-	Use:   "create",
-	Args:  cobra.MatchAll(cobra.MaximumNArgs(1)),
-	Short: "Create a new workspace",
-	Long: `Use this command to create a new resource. A resource
-	could be a workspace
-	`,
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "Get details for the current environment.",
+	Long:  `Read the configuration file and displays details for the current environment.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		workspaceName := args[0]
-		if workspaceName == "" {
-			log.Fatal("Workspace name not set")
-		}
-		dbConfigs, err := cmd.Flags().GetString("config")
+		err := viper.UnmarshalKey("workspaces", &config.Workspaces)
 		if err != nil {
-			log.Fatal("DB Config name is not valid")
+			fmt.Println("Error fetching workspaces:", err)
+			return
 		}
-		createDb(workspaceName, dbConfigs)
+		if len(config.Workspaces) == 0 {
+			fmt.Printf("No workspaces found.\n")
+			return
+		}
+
+		currentWorkspace, err := config.GetWorkspace(viper.GetString("workspace"))
+		if err != nil {
+			fmt.Println("Error fetching current workspace:", err)
+		}
+
+		fmt.Printf("Activated Workspace: %s\n", config.CurrentWorkspace)
+		fmt.Printf("Activated Environment: %s\n", config.CurrentEnv)
+		fmt.Printf("Available Environments\n")
+		if len(currentWorkspace.Environment) == 0 {
+			fmt.Print("[]")
+		}
+		if len(currentWorkspace.Environment) != 0 {
+			envs := slices.Collect(maps.Keys(currentWorkspace.Environment))
+			fmt.Printf("Envs: %s", envs)
+
+		}
 	},
 }
 
 func init() {
-	WorkspaceCmd.AddCommand(createCmd)
+	EnvironmentCmd.AddCommand(listCmd)
 }

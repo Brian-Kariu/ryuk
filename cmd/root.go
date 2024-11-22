@@ -31,6 +31,7 @@ import (
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/cmd/environment"
+	"github.com/Brian-Kariu/ryuk/cmd/variables"
 	"github.com/Brian-Kariu/ryuk/cmd/workspace"
 	"github.com/Brian-Kariu/ryuk/db"
 )
@@ -81,20 +82,51 @@ func Execute() {
 }
 
 func addSubcommands() {
-	RootCmd.AddCommand(workspace.WorkspaceCmd, environment.EnvironmentCmd)
+	RootCmd.AddCommand(workspace.WorkspaceCmd, environment.EnvironmentCmd, variables.VariablesCmd)
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ryuk/ryuk.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "default", "Workspace currently in use.")
+	viper.BindPFlag("workspace", RootCmd.PersistentFlags().Lookup("workspace"))
+	RootCmd.PersistentFlags().StringVarP(&config.CurrentEnv, "env", "e", "", "Env currently in use.")
+	viper.BindPFlag("env", RootCmd.PersistentFlags().Lookup("env"))
 
 	addSubcommands()
 }
 
 func initGlobalDb(path string) {
-	dbInstance := db.NewClient(filepath.Join(path, "default"), "")
+	dbInstance, err := db.NewClient(filepath.Join(path, "default"), "")
+	if err != nil {
+		fmt.Printf("Error creating DB!")
+	}
 	dbInstance.CreateBucket("prod")
+}
+
+func setCurrentWorkspace() {
+	verifiedWorkspace := ""
+	if viper.Get("workspace") == "" {
+		viper.Set("workspace", "default")
+		if err := viper.WriteConfig(); err != nil {
+			fmt.Errorf("Error saving current workspace: %v\n", err)
+		}
+		return
+
+	}
+	for _, ws := range config.Workspaces {
+		if ws.Name == config.CurrentWorkspace {
+			verifiedWorkspace = ws.Name
+			break
+		}
+	}
+	if verifiedWorkspace != "" {
+		viper.Set("workspace", verifiedWorkspace)
+	}
+	if err := viper.WriteConfig(); err != nil {
+		fmt.Errorf("Error saving current workspace: %v\n", err)
+	}
 }
 
 func initConfig() {
@@ -121,18 +153,14 @@ func initConfig() {
 
 	if viper.IsSet("workspaces") == false {
 		defaultDbName := "default"
-		defaultWorkspace := config.WorkspaceConfig{
-			Name:        defaultDbName,
-			Path:        filepath.Join(config.BasePath, "default.db"),
-			Environment: []string{"prod"},
-		}
-
+		envs := []string{"prod"}
+		config.NewWorkspaceConfig(defaultDbName, envs)
 		initGlobalDb(config.BasePath)
-		viper.SetDefault("workspaces", []config.WorkspaceConfig{defaultWorkspace})
 
 		viper.WriteConfig()
 
 	}
+	setCurrentWorkspace()
 
 	err := viper.UnmarshalKey("workspaces", &config.Workspaces)
 	if err != nil {
