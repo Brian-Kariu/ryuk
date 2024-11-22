@@ -19,51 +19,33 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package environment
+package variables
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
-	"github.com/Brian-Kariu/ryuk/cmd/flags"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
-func createEnv(envName string) {
-	client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), viper.GetString("env"))
-	if err != nil {
-		fmt.Printf("Error creating DB!")
-	}
-	client.CreateBucket(envName)
-	config.UpdateWorkspace(viper.GetString("workspace"), envName)
-}
-
-var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create a new environment",
-	Long: `Use this command to create a new resource. A resource
-	could be a workspace, environment or variable
-	`,
+var deleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "delete an environment variables",
+	Args:  cobra.MaximumNArgs(1),
+	Long:  `delete a specific environment variable`,
 	Run: func(cmd *cobra.Command, args []string) {
-		envName := args[0]
-		if envName == "" {
-			log.Fatal("Environment name not set")
+		client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), viper.GetString("env"))
+		if err != nil {
+			fmt.Printf("Error creating DB!")
 		}
-		createEnv(envName)
+		client.DeleteKey(viper.GetString("env"), args[0])
 	},
 }
 
 func init() {
-	EnvironmentCmd.AddCommand(createCmd)
-
-	myFlagSet := flags.NewCreateFlagSet(flags.Environment)
-	createCmd.Flags().AddFlagSet(myFlagSet)
-
-	// Bind flags to Viper
-	viper.BindPFlags(createCmd.Flags())
+	VariablesCmd.AddCommand(deleteCmd)
 }

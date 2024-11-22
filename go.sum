@@ -1,3 +1,7 @@
+github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
+github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
+github.com/boltdb/boltd v0.0.0-20150220181201-1f04e2021e45 h1:ep0QrTbZFgXa8e4lTAdd/NPY9ZiSP/ysDf26+UNPogo=
+github.com/boltdb/boltd v0.0.0-20150220181201-1f04e2021e45/go.mod h1:512MO8jN3usqrPdyZ8YtG6vLsQ8wGV5W9cykDwCy1WI=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

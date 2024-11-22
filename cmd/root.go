@@ -31,6 +31,7 @@ import (
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/cmd/environment"
+	"github.com/Brian-Kariu/ryuk/cmd/variables"
 	"github.com/Brian-Kariu/ryuk/cmd/workspace"
 	"github.com/Brian-Kariu/ryuk/db"
 )
@@ -81,7 +82,7 @@ func Execute() {
 }
 
 func addSubcommands() {
-	RootCmd.AddCommand(workspace.WorkspaceCmd, environment.EnvironmentCmd)
+	RootCmd.AddCommand(workspace.WorkspaceCmd, environment.EnvironmentCmd, variables.VariablesCmd)
 }
 
 func init() {
@@ -90,12 +91,17 @@ func init() {
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	RootCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "default", "Workspace currently in use.")
 	viper.BindPFlag("workspace", RootCmd.PersistentFlags().Lookup("workspace"))
+	RootCmd.PersistentFlags().StringVarP(&config.CurrentEnv, "env", "e", "", "Env currently in use.")
+	viper.BindPFlag("env", RootCmd.PersistentFlags().Lookup("env"))
 
 	addSubcommands()
 }
 
 func initGlobalDb(path string) {
-	dbInstance := db.NewClient(filepath.Join(path, "default"), "")
+	dbInstance, err := db.NewClient(filepath.Join(path, "default"), "")
+	if err != nil {
+		fmt.Printf("Error creating DB!")
+	}
 	dbInstance.CreateBucket("prod")
 }
 

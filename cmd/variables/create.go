@@ -19,7 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package environment
+package variables
 
 import (
 	"fmt"
@@ -30,40 +30,47 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/Brian-Kariu/ryuk/cmd/config"
-	"github.com/Brian-Kariu/ryuk/cmd/flags"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
-func createEnv(envName string) {
-	client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), viper.GetString("env"))
+type Config struct {
+	key   []byte
+	value []byte
+}
+
+func createVar(bucket string, data db.Config) {
+	client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), bucket)
 	if err != nil {
 		fmt.Printf("Error creating DB!")
 	}
-	client.CreateBucket(envName)
-	config.UpdateWorkspace(viper.GetString("workspace"), envName)
+	err = client.AddKey(bucket, data)
+	if err != nil {
+		log.Fatalf("Failed to add key: %v", err)
+	}
 }
 
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new environment",
+	Args:  cobra.ExactArgs(2),
 	Long: `Use this command to create a new resource. A resource
 	could be a workspace, environment or variable
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		envName := args[0]
-		if envName == "" {
-			log.Fatal("Environment name not set")
+		if args[0] == "" && args[1] == "" {
+			log.Fatal("Not specified key and value")
 		}
-		createEnv(envName)
+		data := db.Config{Key: []byte(args[0]), Value: []byte(args[1])}
+		createVar(viper.GetString("env"), data)
 	},
 }
 
 func init() {
-	EnvironmentCmd.AddCommand(createCmd)
+	VariablesCmd.AddCommand(createCmd)
 
-	myFlagSet := flags.NewCreateFlagSet(flags.Environment)
-	createCmd.Flags().AddFlagSet(myFlagSet)
-
-	// Bind flags to Viper
-	viper.BindPFlags(createCmd.Flags())
+	// myFlagSet := flags.NewCreateFlagSet(flags.Environment)
+	// createCmd.Flags().AddFlagSet(myFlagSet)
+	//
+	// // Bind flags to Viper
+	// viper.BindPFlags(createCmd.Flags())
 }

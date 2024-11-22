@@ -23,6 +23,8 @@ package environment
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -38,6 +40,7 @@ var listCmd = &cobra.Command{
 		err := viper.UnmarshalKey("workspaces", &config.Workspaces)
 		if err != nil {
 			fmt.Println("Error fetching workspaces:", err)
+			return
 		}
 		if len(config.Workspaces) == 0 {
 			fmt.Printf("No workspaces found.\n")
@@ -49,13 +52,16 @@ var listCmd = &cobra.Command{
 			fmt.Println("Error fetching current workspace:", err)
 		}
 
-		fmt.Printf("Activated Workspace: %s\n", currentWorkspace.Name)
+		fmt.Printf("Activated Workspace: %s\n", config.CurrentWorkspace)
+		fmt.Printf("Activated Environment: %s\n", config.CurrentEnv)
 		fmt.Printf("Available Environments\n")
 		if len(currentWorkspace.Environment) == 0 {
 			fmt.Print("[]")
 		}
-		for _, ws := range currentWorkspace.Environment {
-			fmt.Printf("\t- %s\n", ws)
+		if len(currentWorkspace.Environment) != 0 {
+			envs := slices.Collect(maps.Keys(currentWorkspace.Environment))
+			fmt.Printf("Envs: %s", envs)
+
 		}
 	},
 }

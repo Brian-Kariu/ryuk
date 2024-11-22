@@ -11,6 +11,8 @@ require (
 )
 
 require (
+	github.com/boltdb/bolt v1.3.1 // indirect
+	github.com/boltdb/boltd v0.0.0-20150220181201-1f04e2021e45 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
