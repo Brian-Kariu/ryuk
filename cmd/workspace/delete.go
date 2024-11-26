@@ -22,28 +22,42 @@ THE SOFTWARE.
 package workspace
 
 import (
-	"fmt"
-
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Brian-Kariu/ryuk/cmd/config"
+	"github.com/Brian-Kariu/ryuk/config"
 )
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Args:  cobra.ExactArgs(1),
 	Short: "Removes a workspace",
 	Long:  `Deletes the specified workspace. This is case sensitive.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		workspaceName := args[0]
-		ws, err := config.GetWorkspace(workspaceName)
-		if err != nil {
-			fmt.Println("Error workspaces %s doesn't exist", workspaceName)
+		var selected string
+		var opt []huh.Option[string]
+		for _, ws := range config.Workspaces {
+			name := ws.Name
+			id := ws.ID
+			opt = append(opt, huh.NewOption(name, id))
 		}
 
-		config.DeleteWorkspace(ws.ID)
-		fmt.Printf("Deleted workspace %s.", workspaceName)
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Select workspace to delete").
+					Value(&selected).
+					Height(8).
+					Options(opt...),
+			),
+		)
+		err := form.Run()
+		if err != nil {
+			log.Fatal("Error with selection: %v", err)
+		}
+		config.DeleteWorkspace(selected)
+		log.Info("Deleted workspace %v.", "selected", selected)
 	},
 }
 

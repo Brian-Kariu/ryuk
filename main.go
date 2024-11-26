@@ -23,10 +23,8 @@ package main
 
 import (
 	"github.com/Brian-Kariu/ryuk/cmd"
-	"github.com/Brian-Kariu/ryuk/internal/ui"
 )
 
 func main() {
-	ui.StartApp()
 	cmd.Execute()
 }

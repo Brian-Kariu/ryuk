@@ -23,13 +23,14 @@ package variables
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Brian-Kariu/ryuk/cmd/config"
+	"github.com/Brian-Kariu/ryuk/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
@@ -52,15 +53,44 @@ func createVar(bucket string, data db.Config) {
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new environment",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.NoArgs,
 	Long: `Use this command to create a new resource. A resource
 	could be a workspace, environment or variable
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[0] == "" && args[1] == "" {
-			log.Fatal("Not specified key and value")
+		var envName string
+		var envValue string
+		var confirm bool
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Input var name").
+					Placeholder("Value").
+					Value(&envName),
+				huh.NewInput().
+					Title("Input var value").
+					Placeholder("Value").
+					Value(&envValue),
+				huh.NewConfirm().
+					Title("Are you sure?").
+					Affirmative("Yes!").
+					Negative("No.").
+					Value(&confirm),
+			),
+		)
+		err := form.Run()
+		if err != nil {
+			log.Fatalf("Workspace name not set!")
 		}
-		data := db.Config{Key: []byte(args[0]), Value: []byte(args[1])}
+		if !viper.IsSet("workspace") {
+			log.Fatal("Workspace flag not set!")
+		}
+		if !viper.IsSet("env") {
+			log.Fatal("Env flag not set!")
+		}
+		log.Info("Env Name: ", "key", envName)
+		log.Info("Env Value: ", "value", envValue)
+		data := db.Config{Key: []byte(envName), Value: []byte(envValue)}
 		createVar(viper.GetString("env"), data)
 	},
 }
@@ -68,9 +98,6 @@ var createCmd = &cobra.Command{
 func init() {
 	VariablesCmd.AddCommand(createCmd)
 
-	// myFlagSet := flags.NewCreateFlagSet(flags.Environment)
-	// createCmd.Flags().AddFlagSet(myFlagSet)
-	//
-	// // Bind flags to Viper
-	// viper.BindPFlags(createCmd.Flags())
+	createCmd.MarkPersistentFlagRequired("workspace")
+	createCmd.MarkPersistentFlagRequired("env")
 }

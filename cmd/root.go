@@ -26,13 +26,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/cmd/environment"
 	"github.com/Brian-Kariu/ryuk/cmd/variables"
 	"github.com/Brian-Kariu/ryuk/cmd/workspace"
+	"github.com/Brian-Kariu/ryuk/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
@@ -42,6 +43,13 @@ type configFile struct {
 	path     string
 	fileName string
 	fullpath string
+}
+
+func (c configFile) check() {
+	_, err := os.Stat(c.path)
+	if err != nil {
+		log.Fatal("Error ryuk not initialized. Run init command")
+	}
 }
 
 func (c configFile) checkDir() {
@@ -72,6 +80,10 @@ var RootCmd = &cobra.Command{
 	Use:   "ryuk",
 	Short: "A fast configuration management library",
 	Long:  `Ryuk is a powerful cli app that helps you manage your application configs and secrets!`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		configFileInstance := newConfigFile(config.BasePath, ".ryuk.yaml")
+		configFileInstance.check()
+	},
 }
 
 func Execute() {
@@ -82,25 +94,21 @@ func Execute() {
 }
 
 func addSubcommands() {
-	RootCmd.AddCommand(workspace.WorkspaceCmd, environment.EnvironmentCmd, variables.VariablesCmd)
+	RootCmd.AddCommand(workspace.WorkspaceCmd, environment.EnvironmentCmd, variables.VariablesCmd, InitCmd)
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (local is $HOME/.ryuk/ryuk.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ryuk/ryuk.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	RootCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "local", "Workspace currently in use.")
-	viper.BindPFlag("workspace", RootCmd.PersistentFlags().Lookup("workspace"))
-	RootCmd.PersistentFlags().StringVarP(&config.CurrentEnv, "env", "e", "", "Env currently in use.")
-	viper.BindPFlag("env", RootCmd.PersistentFlags().Lookup("env"))
 
 	addSubcommands()
 }
 
 func initGlobalDb(path string) {
-	dbInstance, err := db.NewClient(filepath.Join(path, "local"), "")
+	dbInstance, err := db.NewClient(filepath.Join(path, "default"), "")
 	if err != nil {
-		fmt.Printf("Error creating DB!")
+		log.Error("Error creating DB, %v", err)
 	}
 	dbInstance.CreateBucket("prod")
 }
@@ -108,7 +116,7 @@ func initGlobalDb(path string) {
 func setCurrentWorkspace() {
 	verifiedWorkspace := ""
 	if viper.Get("workspace") == "" {
-		viper.Set("workspace", "local")
+		viper.Set("workspace", "default")
 		if err := viper.WriteConfig(); err != nil {
 			fmt.Errorf("Error saving current workspace: %v\n", err)
 		}
@@ -135,9 +143,6 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		config.InitConstants()
-		configFileInstance := newConfigFile(config.BasePath, ".ryuk.yaml")
-		configFileInstance.checkDir()
-		configFileInstance.checkFile()
 
 		viper.AddConfigPath(config.BasePath)
 		viper.SetConfigType("yaml")
@@ -148,22 +153,12 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
-
-	if viper.IsSet("workspaces") == false {
-		localDbName := "local"
-		envs := []string{"prod"}
-		config.NewWorkspaceConfig(localDbName, envs)
-		initGlobalDb(config.BasePath)
-
-		viper.WriteConfig()
-
+		log.Info("Using config ", "file:", viper.ConfigFileUsed())
 	}
 	setCurrentWorkspace()
 
 	err := viper.UnmarshalKey("workspaces", &config.Workspaces)
 	if err != nil {
-		fmt.Println("Error initializing workspaces:", err)
+		log.Warn("Error initializing workspaces:", err)
 	}
 }

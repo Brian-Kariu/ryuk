@@ -90,22 +90,21 @@ func (c client) GetKey(bucket string, config string) {
 	}
 }
 
-func (c client) ListKeys(bucket string) ([]string, error) {
-	keys := []string{}
+func (c client) ListVars(bucket string) (map[string]string, error) {
+	envVars := make(map[string]string)
 	err := c.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
 			return fmt.Errorf("bucket %s not found", bucket)
 		}
 
-		return b.ForEach(func(k, _ []byte) error {
-			keys = append(keys, string(k))
-			fmt.Printf("\t- %s\n", string(k))
+		return b.ForEach(func(k, v []byte) error {
+			envVars[string(k)] = string(v)
 			return nil
 		})
 	})
 	defer c.db.Close()
-	return keys, err
+	return envVars, err
 }
 
 func (c client) DeleteKey(bucket, config string) {
