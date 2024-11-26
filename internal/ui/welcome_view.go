@@ -1,32 +1,18 @@
 package ui
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-
-	"github.com/Brian-Kariu/ryuk/cmd/config"
 )
 
 type welcomeModel struct {
 	message    string
 	showPrompt bool
 	createEnv  bool
-}
-
-// Check if .ryuk.yaml exists
-func checkConfigFile() bool {
-	config.InitConstants()
-	fullpath := filepath.Join(config.BasePath, ".ryuk.yaml")
-	_, err := os.Stat(fullpath)
-	return !os.IsNotExist(err)
+	Quitting   bool
 }
 
 // Initial model setup
-func initialWelcomeModel() welcomeModel {
+func InitialWelcomeModel() welcomeModel {
 	message := `
 ██████╗ ██╗   ██╗██╗   ██╗██╗  ██╗
 ██╔══██╗╚██╗ ██╔╝██║   ██║██║ ██╔╝
@@ -37,11 +23,8 @@ func initialWelcomeModel() welcomeModel {
 
 Welcome to Ryuk CLI!
 `
-	showPrompt := !checkConfigFile()
-
 	return welcomeModel{
-		message:    message,
-		showPrompt: showPrompt,
+		message: message,
 	}
 }
 
@@ -50,51 +33,26 @@ func (m welcomeModel) Init() tea.Cmd {
 }
 
 func (m welcomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "y":
-			if m.showPrompt {
-				return m, func() tea.Msg {
-					StartWorkspaceView()
-					return nil
-				}
-			}
-		case "enter":
-			if !m.showPrompt {
-				return m, tea.Quit
-			}
-		case "q", "ctrl+c":
+	// Make sure these keys always quit
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		k := msg.String()
+		if k == "q" || k == "esc" || k == "ctrl+c" {
+			m.Quitting = true
 			return m, tea.Quit
 		}
+		// if k == "y" {
+		// 	workspace := InitialWorkspaceModel()
+		// 	return workspace.Update(msg)
+		// }
 	}
-	return m, nil
+
+	welcome := InitialWelcomeModel()
+	return welcome.Update(msg)
 }
 
 func (m welcomeModel) View() string {
-	style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#34D399"))
-
-	if m.showPrompt {
-		return fmt.Sprintf(
-			"%s\n%s\n\n%s",
-			style.Render(m.message),
-			"Configuration file `.ryuk.yaml` not found!",
-			"Press 'y' to create a new environment, or 'q' to quit.",
-		)
+	if m.Quitting {
+		return "\n  See you later!\n\n"
 	}
-
-	return fmt.Sprintf(
-		"%s\n%s\n\n%s",
-		style.Render(m.message),
-		"Configuration file detected!",
-		"Press 'Enter' to continue or 'q' to quit.",
-	)
-}
-
-func StartWelcome() {
-	p := tea.NewProgram(initialWelcomeModel())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error starting welcome view: %v\n", err)
-		os.Exit(1)
-	}
+	return m.message
 }
