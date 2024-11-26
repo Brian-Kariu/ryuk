@@ -22,22 +22,22 @@ THE SOFTWARE.
 package environment
 
 import (
-	"fmt"
-	"log"
 	"path/filepath"
 
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Brian-Kariu/ryuk/cmd/config"
 	"github.com/Brian-Kariu/ryuk/cmd/flags"
+	"github.com/Brian-Kariu/ryuk/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
 func createEnv(envName string) {
 	client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), viper.GetString("env"))
 	if err != nil {
-		fmt.Printf("Error creating DB!")
+		log.Fatal("Error creating DB!")
 	}
 	client.CreateBucket(envName)
 	config.UpdateWorkspace(viper.GetString("workspace"), envName)
@@ -46,11 +46,24 @@ func createEnv(envName string) {
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new environment",
+	Args:  cobra.NoArgs,
 	Long: `Use this command to create a new resource. A resource
 	could be a workspace, environment or variable
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		envName := args[0]
+		var envName string
+		input := huh.NewInput().
+			Title("Input env Name").
+			Prompt("?").
+			Value(&envName)
+		err := input.Run()
+		if err != nil {
+			log.Fatalf("Environment name not set!")
+		}
+		if !viper.IsSet("workspace") {
+			log.Fatal("Workspace config not set.")
+		}
+
 		if envName == "" {
 			log.Fatal("Environment name not set")
 		}
@@ -63,6 +76,8 @@ func init() {
 
 	myFlagSet := flags.NewCreateFlagSet(flags.Environment)
 	createCmd.Flags().AddFlagSet(myFlagSet)
+
+	createCmd.MarkPersistentFlagRequired("workspace")
 
 	// Bind flags to Viper
 	viper.BindPFlags(createCmd.Flags())

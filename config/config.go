@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 )
@@ -33,7 +34,9 @@ func updateWorkspaces(w WorkspaceConfig) error {
 type WorkspaceConfig struct {
 	ID          string              `mapstructure:"id"`
 	Name        string              `mapstructure:"name"`
-	Path        string              `mapstructure:"path"`
+	DB          string              `mapstructure:"db"`
+	Description string              `mapstructure:"description"`
+	Project     string              `mapstructure:"project"`
 	Environment map[string]struct{} `mapstructure:"environment"`
 }
 
@@ -70,11 +73,11 @@ func UpdateWorkspace(name, env string) {
 		}
 	}
 	Workspaces[currentWorkspaceIndex].Environment = ws.Environment
-	fmt.Println("Current env var: %s", ws.Environment)
-	fmt.Println("Current workspaces: %s", Workspaces)
+	log.Info("Current env var: %s", "value", ws.Environment)
+	log.Info("Current workspaces: %s", "value", Workspaces[0].Name)
 	viper.Set("workspaces", Workspaces)
 	if err := viper.WriteConfig(); err != nil {
-		fmt.Errorf("Error saving workspaces : %v\n", err)
+		log.Error("Error saving workspaces : %v\n", err)
 	}
 }
 
@@ -90,7 +93,7 @@ func GetWorkspace(name string) (WorkspaceConfig, error) {
 func checkWorkspaceExists(name string) error {
 	err := viper.UnmarshalKey("workspaces", &Workspaces)
 	if err != nil {
-		fmt.Println("Error fetching workspaces: %v", err)
+		log.Error("Error fetching workspaces: %v", err)
 	}
 
 	for _, ws := range Workspaces {
@@ -101,22 +104,29 @@ func checkWorkspaceExists(name string) error {
 	return nil
 }
 
-func NewWorkspaceConfig(name string, environment []string) {
+func NewWorkspaceConfig(name, description string, environment []string, confirm bool) {
+	var projectPath string
 	filePath := filepath.Join(BasePath, name)
+	if confirm {
+		projectPath, _ = os.Getwd()
+	}
 	id := uuid.New().String()
 	envSet := map[string]struct{}{}
 	for _, env := range environment {
 		envSet[env] = struct{}{}
 	}
+
 	newWorkspace := WorkspaceConfig{
 		ID:          id,
 		Name:        name,
-		Path:        filePath,
+		DB:          filePath,
+		Description: description,
 		Environment: envSet,
+		Project:     projectPath,
 	}
 	err := updateWorkspaces(newWorkspace)
 	if err != nil {
-		log.Println("Error creating workspace %s", name)
+		log.Error("Error creating workspace %s", name)
 	}
 	log.Printf("%s workspace has been created.\n", name)
 }

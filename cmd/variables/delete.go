@@ -22,13 +22,13 @@ THE SOFTWARE.
 package variables
 
 import (
-	"fmt"
 	"path/filepath"
 
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/Brian-Kariu/ryuk/cmd/config"
+	"github.com/Brian-Kariu/ryuk/config"
 	"github.com/Brian-Kariu/ryuk/db"
 )
 
@@ -40,7 +40,7 @@ var deleteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := db.NewClient(filepath.Join(config.BasePath, viper.GetString("workspace")), viper.GetString("env"))
 		if err != nil {
-			fmt.Printf("Error creating DB!")
+			log.Error("Error creating DB!")
 		}
 		client.DeleteKey(viper.GetString("env"), args[0])
 	},

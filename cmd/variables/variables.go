@@ -23,6 +23,9 @@ package variables
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/Brian-Kariu/ryuk/config"
 )
 
 // variablesCmd represents the environment command
@@ -33,4 +36,11 @@ var VariablesCmd = &cobra.Command{
 }
 
 func init() {
+	VariablesCmd.PersistentFlags().StringVarP(&config.CurrentWorkspace, "workspace", "w", "default", "Workspace currently in use.")
+	viper.BindPFlag("workspace", VariablesCmd.PersistentFlags().Lookup("workspace"))
+
+	VariablesCmd.MarkPersistentFlagRequired("workspace")
+	VariablesCmd.PersistentFlags().StringVarP(&config.CurrentEnv, "env", "e", "", "Env currently in use.")
+	viper.BindPFlag("env", VariablesCmd.PersistentFlags().Lookup("env"))
+	VariablesCmd.MarkPersistentFlagRequired("env")
 }
