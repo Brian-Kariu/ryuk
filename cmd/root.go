@@ -35,6 +35,7 @@ import (
 	"github.com/Brian-Kariu/ryuk/cmd/workspace"
 	"github.com/Brian-Kariu/ryuk/config"
 	"github.com/Brian-Kariu/ryuk/db"
+	"github.com/Brian-Kariu/ryuk/tui"
 )
 
 var cfgFile string
@@ -83,6 +84,9 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		configFileInstance := newConfigFile(config.BasePath, ".ryuk.yaml")
 		configFileInstance.check()
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		tui.InitEntry()
 	},
 }
 
