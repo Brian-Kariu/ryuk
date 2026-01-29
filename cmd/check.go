@@ -17,29 +17,20 @@ var checkCmd = &cobra.Command{
 	is run to ensure that ryuk is able to pull environment variables from this file. Note that the .env file or files
 	have to be valid.
 	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		envFiles := Scan()
-		if len(envFiles) != 0 {
-			validEnvs := Validate(envFiles)
-			if len(validEnvs) != 0 {
-				fmt.Printf("Found a %d valid env files\n", len(validEnvs))
-			} else {
-				fmt.Println("No valid env file found configured for ryuk. Run go-ryuk init to configure ryuk for this project.")
-			}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		found, err := CheckDir()
+		if err != nil {
+			return err
 		}
+		if found {
+			fmt.Println("Found valid env file(s)")
+		} else {
+			fmt.Println("No valid env file found configured for ryuk. Run go-ryuk init to configure ryuk for this project.")
+		}
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(checkCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// checkCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// checkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

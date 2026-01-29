@@ -26,6 +26,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -35,43 +36,46 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize you go-ryuk app",
 	Long:  `Initiailizes the app and sets configuration settings`,
-	Run: func(cmd *cobra.Command, args []string) {
-		viper.SetConfigName(cfgFile)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		viper.Set("environment", environment)
+		viper.Set("config", viper.ConfigFileUsed())
+		viper.WriteConfigAs(viper.ConfigFileUsed())
+
 		envFiles := []string{}
 		validEnvFiles := 0
-		scanFiles := Scan(environment)
-		if len(scanFiles) != 0 && slices.Contains(scanFiles, environment) {
-			validEnvFiles = len(Validate(scanFiles))
+		scanFiles, err := Scan("", viper.GetString("environment"))
+		if err != nil {
+			return err
+		}
+		if len(scanFiles) != 0 && slices.Contains(scanFiles, viper.GetString("environment")) {
+			validEnvs, err := Validate(scanFiles)
+			if err != nil {
+				return err
+			}
+			validEnvFiles = len(validEnvs)
 			envFiles = scanFiles
-
 		} else {
-			envFileName := environment + ".env"
+			envFileName := viper.GetString("environment") + ".env"
 			envFiles = append(envFiles, envFileName)
+		}
 
-		}
-		environmentUpper := strings.ToUpper(environment)
+		environmentUpper := strings.ToUpper(viper.GetString("environment"))
 		if validEnvFiles == 0 {
-			Create(strings.Join([]string{environmentUpper, "ENV"}, "_"), environment, envFiles[0])
-			Create("GORYUK", "TRUE", envFiles[0])
+			if err := Create(strings.Join([]string{environmentUpper, "ENV"}, "_"), viper.GetString("environment"), envFiles[0]); err != nil {
+				return err
+			}
+			if err := Create(SentinelKey, "TRUE", envFiles[0]); err != nil {
+				return err
+			}
 		}
-		viper.WatchConfig()
-		viper.GetEnvPrefix()
-		fmt.Printf("%s environment has been activated!", environment)
+		viper.OnConfigChange(func(e fsnotify.Event) {
+			fmt.Println("Config file changed:", e.Name)
+		})
+		fmt.Printf("%s environment has been activated!", viper.GetString("environment"))
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// initCmd.PersistentFlags().String("foo", "", "A help for foo")
-	initCmd.PersistentFlags().StringVarP(&environment, "environment", "e", "test", "The environment the user is working in i.e test, staging")
-	viper.BindPFlag("environment", initCmd.Flags().Lookup("environment"))
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
